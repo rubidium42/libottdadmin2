@@ -638,3 +638,32 @@ class ServerRconEnd(AdminRcon):
 @Packet.register
 class ServerPong(AdminPing):
     packet_id = 126
+
+
+@Packet.register
+class ServerAuthRequest(Packet):
+    packet_id = 128
+    fields = ["method", "public_key", "nonce"]
+
+    def encode(self, method: int, public_key: bytes, nonce: bytes):
+        if len(public_key) != 32:
+            raise ValueError(f'Invalid public_key length {len(public_key)} != 32')
+        if len(nonce) != 24:
+            raise ValueError(f'Invalid nonce length {len(nonce)} != 24')
+
+        self.write_byte(method)
+        for b in public_key:
+            self.write_byte(b)
+        for b in nonce:
+            self.write_byte(b)
+
+    def decode(self) -> Tuple[int, bytes, bytes]:
+        method, = self.read_byte()
+        public_key = bytes(self.read_byte(32))
+        nonce = bytes(self.read_byte(24))
+        return self.data(method, public_key, nonce)
+
+
+@Packet.register
+class ServerEnableEncryption(Packet):
+    packet_id = 129
